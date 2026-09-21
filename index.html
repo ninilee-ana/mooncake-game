@@ -583,7 +583,7 @@ var MODES = {
       showStat:'stars'
     };
   }},
-  eq: { board:'low', pick:2, build:function(cards){
+  eq: { board:'low', pick:2, memorize:0, build:function(cards){
     var pairIdx = combos(cards.length,2);
     var p2 = pick(pairIdx);
     var target2 = cards[p2[0]].cal + cards[p2[1]].cal;
@@ -608,7 +608,7 @@ var MODES = {
       showStat:'cal'
     };
   }},
-  cmp: { board:4, pick:2, build:function(cards){
+  cmp: { board:4, pick:2, memorize:0, build:function(cards){
     var pairIdx = combos(cards.length,2);
     var p3 = pick(pairIdx);
     var sum3 = cards[p3[0]].cal + cards[p3[1]].cal;
@@ -641,7 +641,7 @@ var MODES = {
       showStat:'cal'
     };
   }},
-  x3: { board:3, pick:1, build:function(cards){
+  x3: { board:3, pick:1, memorize:0, build:function(cards){
     var seedIdx = randInt(0, cards.length-1);
     var target = round10(cards[seedIdx].cal*3 + randInt(-60,60));
     function diffOf(i){ return Math.abs(cards[i].cal*3 - target); }
@@ -671,12 +671,13 @@ function genRound(gradeKey){
   var modeDef = MODES[modeKey];
   var cards = pickRoundCards(modeDef.board);
   var q = modeDef.build(cards);
-  return {cfg:cfg, pickCount:modeDef.pick, cards:cards, q:q, selected:[], chancesLeft:cfg.chances, timeLeft: (cfg.memorize>0? cfg.memorize : cfg.answerTime), phase: (cfg.memorize>0?'memorize':'answer')};
+  var memorizeTime = (modeDef.memorize!==undefined) ? modeDef.memorize : cfg.memorize;
+  return {cfg:cfg, memorizeTime:memorizeTime, pickCount:modeDef.pick, cards:cards, q:q, selected:[], chancesLeft:cfg.chances, timeLeft: (memorizeTime>0? memorizeTime : cfg.answerTime), phase: (memorizeTime>0?'memorize':'answer')};
 }
 
 function startMemorizeOrPlay(){
   round = genRound(state.grade);
-  if(round.cfg.memorize>0){
+  if(round.memorizeTime>0){
     state.screen='memorize';
   } else {
     state.screen='play';
@@ -718,7 +719,7 @@ function renderMemorize(){
   stage.insertAdjacentHTML('beforeend', rabbitWidgetHTML(energyStage()));
 
   var timerWrap = el('div','timer-wrap');
-  var total = round.cfg.memorize;
+  var total = round.memorizeTime;
   timerWrap.innerHTML = timerRingHTML(1,'tm') +
     '<div class="timer-label">仔細看看每款月餅的<br><b>熱量數字</b>，等一下要靠記憶作答喔！</div>';
   stage.appendChild(timerWrap);
@@ -785,6 +786,8 @@ function renderPlay(){
     var statHTML;
     if(round.q.showStat==='stars'){
       statHTML = '<div class="stars">'+starsStr(c.stars)+'</div>';
+    } else if(round.memorizeTime===0){
+      statHTML = '<div class="stat">'+c.cal+' 大卡</div>';
     } else {
       statHTML = '<div class="stat hidden-stat">? ? ?</div>';
     }
@@ -802,7 +805,7 @@ function renderPlay(){
     : '請選出 <b class="num" style="color:var(--moon)">'+round.pickCount+'</b> 款月餅，選滿後自動送出';
   stage.appendChild(el('p','pick-hint', pickHintText));
 
-  if(round.cfg.memorize>0){
+  if(round.memorizeTime>0){
     var peekRow = el('div','peek-row');
     var peekBtn = el('button','peek-btn','👀 偷看 5 秒');
     peekBtn.type = 'button';
