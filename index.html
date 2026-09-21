@@ -273,7 +273,7 @@ footer{text-align:center;color:var(--muted);font-size:16px;margin-top:20px;opaci
       <div class="crater" style="width:7px;height:7px;top:20px;left:64px;"></div>
     </div>
     <h1 class="title">月餅熱量<span class="accent">大挑戰</span></h1>
-    <p class="subtitle">美數學院中秋節限定！讓兔子增加體力倒麻糬吧🐰</p>
+    <p class="subtitle">美數學院中秋節限定！讓兔子增加體力搗麻糬吧🐰</p>
   </div>
 
   <div class="panel" id="stage" role="main"></div>
@@ -295,12 +295,13 @@ var CAKES = [
   {id:'cream', name:'奶黃流心月餅',   cal:200, stars:2, hue:'#f2d98a', pat:'grid'},
   {id:'pine',  name:'鳳梨酥',         cal:180, stars:1, hue:'#e8c34a', pat:'petal'},
   {id:'snow',  name:'冰皮月餅',       cal:130, stars:1, hue:'#e6a8c4', pat:'bloom'},
-  {id:'chestnut', name:'廣式栗蓉月餅', cal:600, stars:4, hue:'#a56a4a', pat:'grid'}
+  {id:'chestnut', name:'廣式栗蓉月餅', cal:600, stars:4, hue:'#a56a4a', pat:'grid'},
+  {id:'mini',  name:'迷你月餅',       cal:90,  stars:1, hue:'#9ab8d8', pat:'bloom'}
 ];
 
 var GRADES = {
   g1:  {label:'一年級', memorize:0,  answerTime:30, chances:2, modes:['star']},
-  g2:  {label:'二年級', memorize:15, answerTime:10, chances:2, modes:['eq']},
+  g2:  {label:'二年級', memorize:15, answerTime:10, chances:2, modes:['eq','recall']},
   g34: {label:'中年級', memorize:15, answerTime:10, chances:2, modes:['cmp']},
   g56: {label:'高年級', memorize:15, answerTime:10, chances:2, modes:['x3','cmp']}
 };
@@ -544,7 +545,11 @@ function renderHome(){
 
 /* ---- round generation ---- */
 function pickRoundCards(board){
-  if(board==='all') return shuffle(CAKES);
+  if(board==='all') return shuffle(CAKES).slice(0, Math.min(9, CAKES.length));
+  if(board==='low'){
+    var lowCards = CAKES.filter(function(c){ return c.cal<=200; });
+    return shuffle(lowCards).slice(0, Math.min(4, lowCards.length));
+  }
   var idxs = shuffle(CAKES.map(function(_,i){return i;})).slice(0,board);
   return idxs.map(function(i){return CAKES[i];});
 }
@@ -565,7 +570,7 @@ var MODES = {
       showStat:'stars'
     };
   }},
-  eq: { board:4, pick:2, build:function(cards){
+  eq: { board:'low', pick:2, build:function(cards){
     var pairIdx = combos(cards.length,2);
     var p2 = pick(pairIdx);
     var target2 = cards[p2[0]].cal + cards[p2[1]].cal;
@@ -577,6 +582,16 @@ var MODES = {
         var one = m[0];
         return cards[one[0]].name+'（'+cards[one[0]].cal+'大卡）＋'+cards[one[1]].name+'（'+cards[one[1]].cal+'大卡）＝'+target2+'大卡';
       },
+      showStat:'cal'
+    };
+  }},
+  recall: { board:4, pick:1, build:function(cards){
+    var idx = randInt(0, cards.length-1);
+    var target = cards[idx].cal;
+    return {
+      text: '哪一款月餅是 <span class="tgt num">'+target+'</span> 大卡呢？🧠',
+      check: function(sel){ return sel.length===1 && cards[sel[0]].cal===target; },
+      reveal: function(){ return cards[idx].name+'（'+target+'大卡）'; },
       showStat:'cal'
     };
   }},
