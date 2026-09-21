@@ -110,25 +110,37 @@ body{
 .lantern-pip::before{content:"";position:absolute;top:-3px;left:50%;transform:translateX(-50%);width:6px;height:3px;border-radius:2px;background:inherit;}
 
 .grade-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.grade-btn{
+.grade-card{
   background:var(--sky-1);
   border:1.5px solid var(--line);
   border-radius:16px;
-  padding:16px 10px;
+  padding:16px 10px 14px;
   color:var(--cream);
   font-family:'Noto Sans TC',sans-serif;
-  font-weight:700;
-  font-size:20px;
-  cursor:pointer;
   text-align:center;
-  transition:transform .15s ease, border-color .15s ease, background .15s ease;
+  transition:border-color .15s ease, background .15s ease;
   display:flex;flex-direction:column;align-items:center;gap:6px;
 }
-.grade-btn .lvl{font-family:'Fredoka';font-size:27px;color:var(--moon);}
-.grade-btn .desc{font-size:16px;color:var(--muted);font-weight:400;}
-.grade-btn:hover{border-color:var(--moon);transform:translateY(-2px);background:#2b3060;}
-.grade-btn:active{transform:translateY(0);}
-.grade-btn:focus-visible{outline:2px solid var(--moon);outline-offset:2px;}
+.grade-card:hover{border-color:var(--moon);background:#2b3060;}
+.grade-card .lvl{font-family:'Fredoka';font-size:27px;font-weight:700;color:var(--moon);}
+.grade-card .glabel{font-size:20px;font-weight:700;}
+.grade-card .desc{font-size:16px;color:var(--muted);font-weight:400;margin-bottom:4px;}
+.grade-actions{display:flex;flex-direction:column;gap:6px;width:100%;}
+.start-btn,.warmup-btn{
+  font-family:'Noto Sans TC',sans-serif;font-weight:700;font-size:15px;
+  border-radius:12px;padding:9px 8px;cursor:pointer;width:100%;
+  transition:transform .15s ease, border-color .15s ease, background .15s ease;
+}
+.start-btn{
+  background:linear-gradient(180deg,var(--moon-soft),var(--moon));
+  border:none;color:#3a2a0c;
+}
+.start-btn:hover{transform:translateY(-1px);}
+.warmup-btn{
+  background:transparent;border:1.5px solid var(--line);color:var(--muted);
+}
+.warmup-btn:hover{border-color:var(--jade);color:var(--cream);}
+.start-btn:focus-visible,.warmup-btn:focus-visible{outline:2px solid var(--moon);outline-offset:2px;}
 
 /* ---------- primary buttons ---------- */
 .btn{
@@ -314,9 +326,9 @@ var CAKES = [
 
 var GRADES = {
   g1:  {label:'一年級', memorize:0,  answerTime:30, chances:2, modes:['star']},
-  g2:  {label:'二年級', memorize:15, answerTime:10, chances:2, modes:['eq','recall']},
-  g34: {label:'中年級', memorize:15, answerTime:10, chances:2, modes:['cmp']},
-  g56: {label:'高年級', memorize:15, answerTime:10, chances:2, modes:['x3','cmp']}
+  g2:  {label:'二年級', memorize:15, answerTime:20, chances:2, modes:['eq','recall']},
+  g34: {label:'中年級', memorize:15, answerTime:20, chances:2, modes:['cmp']},
+  g56: {label:'高年級', memorize:15, answerTime:20, chances:2, modes:['x3','cmp']}
 };
 var GRADE_ORDER = ['g1','g2','g34','g56'];
 var GRADE_DESC = {
@@ -543,15 +555,28 @@ function renderHome(){
   var grid = el('div','grade-grid');
   GRADE_ORDER.forEach(function(key){
     var g = GRADES[key];
-    var btn = el('button','grade-btn');
-    btn.innerHTML = '<span class="lvl">'+ (key==='g1'?'1':key==='g2'?'2':key==='g34'?'3·4':'5·6') +'</span>'+
-      '<span>'+g.label+'</span><span class="desc">'+GRADE_DESC[key]+'</span>';
-    btn.addEventListener('click', function(){
+    var card = el('div','grade-card');
+    card.innerHTML = '<span class="lvl">'+ (key==='g1'?'1':key==='g2'?'2':key==='g34'?'3·4':'5·6') +'</span>'+
+      '<span class="glabel">'+g.label+'</span><span class="desc">'+GRADE_DESC[key]+'</span>';
+    var actions = el('div','grade-actions');
+    var startBtn = el('button','start-btn','▶ 開始挑戰');
+    startBtn.type = 'button';
+    startBtn.addEventListener('click', function(){
       Sound.click();
       state.grade = key;
-      startMemorizeOrPlay();
+      startMemorizeOrPlay(false);
     });
-    grid.appendChild(btn);
+    var warmupBtn = el('button','warmup-btn','🔥 暖身題');
+    warmupBtn.type = 'button';
+    warmupBtn.addEventListener('click', function(){
+      Sound.click();
+      state.grade = key;
+      startMemorizeOrPlay(true);
+    });
+    actions.appendChild(startBtn);
+    actions.appendChild(warmupBtn);
+    card.appendChild(actions);
+    grid.appendChild(card);
   });
   stage.appendChild(grid);
 }
@@ -675,8 +700,9 @@ function genRound(gradeKey){
   return {cfg:cfg, memorizeTime:memorizeTime, pickCount:modeDef.pick, cards:cards, q:q, selected:[], chancesLeft:cfg.chances, timeLeft: (memorizeTime>0? memorizeTime : cfg.answerTime), phase: (memorizeTime>0?'memorize':'answer')};
 }
 
-function startMemorizeOrPlay(){
+function startMemorizeOrPlay(practice){
   round = genRound(state.grade);
+  round.practice = !!practice;
   if(round.memorizeTime>0){
     state.screen='memorize';
   } else {
@@ -714,7 +740,7 @@ function cancelPeek(){
 
 function renderMemorize(){
   clearTimer();
-  var eyebrow = el('p','eyebrow','STEP 1・記住月餅熱量');
+  var eyebrow = el('p','eyebrow','STEP 1・記住月餅熱量'+(round.practice?'　🔥暖身模式':''));
   stage.appendChild(eyebrow);
   stage.insertAdjacentHTML('beforeend', rabbitWidgetHTML(energyStage()));
 
@@ -751,7 +777,7 @@ function renderMemorize(){
 function renderPlay(){
   clearTimer();
   clearPeekTimer();
-  var eyebrow = el('p','eyebrow','STEP 2・任務出題　STEP 3・熱量配對');
+  var eyebrow = el('p','eyebrow','STEP 2・任務出題　STEP 3・熱量配對'+(round.practice?'　🔥暖身模式':''));
   stage.appendChild(eyebrow);
   stage.insertAdjacentHTML('beforeend', rabbitWidgetHTML(energyStage()));
 
@@ -929,8 +955,10 @@ function checkAnswer(){
 function endRound(success, reason){
   round.success = success;
   round.reason = reason;
-  dayCount = Math.min(2, dayCount+1);
-  saveDayCount(dayCount);
+  if(!round.practice){
+    dayCount = Math.min(2, dayCount+1);
+    saveDayCount(dayCount);
+  }
   state.screen='result';
   render();
 }
@@ -941,18 +969,21 @@ function renderResult(){
   else if(round.reason==='time'){ title='時間到囉！'; cls='no'; }
   else { title='再接再厲！'; cls='no'; }
 
+  if(round.practice){
+    stage.appendChild(el('p','eyebrow','🔥 暖身模式（不計入次數）'));
+  }
   stage.insertAdjacentHTML('beforeend', rabbitWidgetHTML(energyStage()));
   stage.appendChild(el('h2','result-title '+cls, title));
   stage.appendChild(el('p','result-detail','正確答案：<br><b>'+round.q.reveal()+'</b>'));
 
-  if(dayCount>=2){
+  if(!round.practice && dayCount>=2){
     stage.appendChild(el('p','result-detail','🎉 今天的兩題任務已經完成囉！明天再來挑戰吧！'));
   }
 
   var row = el('div','btn-row');
-  if(dayCount<2){
-    var again = el('button','btn','再挑戰一題 →');
-    again.addEventListener('click', function(){ Sound.click(); startMemorizeOrPlay(); });
+  if(round.practice || dayCount<2){
+    var again = el('button','btn', round.practice ? '再玩一次暖身題 →' : '再挑戰一題 →');
+    again.addEventListener('click', function(){ Sound.click(); startMemorizeOrPlay(round.practice); });
     row.appendChild(again);
   }
   var home = el('button','btn secondary','← 回首頁');
