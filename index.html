@@ -325,10 +325,10 @@ var CAKES = [
 ];
 
 var GRADES = {
-  g1:  {label:'一年級', memorize:0,  answerTime:30, chances:2, modes:['star']},
+  g1:  {label:'一年級', memorize:0,  answerTime:30, chances:2, modes:['star','starSub']},
   g2:  {label:'二年級', memorize:15, answerTime:20, chances:2, modes:['eq','recall']},
-  g34: {label:'中年級', memorize:15, answerTime:20, chances:2, modes:['cmp']},
-  g56: {label:'高年級', memorize:15, answerTime:20, chances:2, modes:['x3','cmp']}
+  g34: {label:'中年級', memorize:15, answerTime:20, chances:2, modes:['cmp','recall']},
+  g56: {label:'高年級', memorize:15, answerTime:20, chances:2, modes:['x3','cmp','recall']}
 };
 var GRADE_ORDER = ['g1','g2','g34','g56'];
 var GRADE_DESC = {
@@ -351,6 +351,13 @@ function shuffle(arr){
     var tmp=a[i]; a[i]=a[j]; a[j]=tmp;
   }
   return a;
+}
+function shuffleInPlace(arr){
+  for(var i=arr.length-1;i>0;i--){
+    var j = Math.floor(Math.random()*(i+1));
+    var tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp;
+  }
+  return arr;
 }
 
 function combos(n,k){
@@ -549,7 +556,7 @@ function renderHome(){
     stage.appendChild(nextBtn);
     return;
   }
-  var eyebrow = el('p','eyebrow','STEP 0・選擇年級');
+  var eyebrow = el('p','eyebrow','選擇年級');
   stage.appendChild(eyebrow);
 
   var grid = el('div','grade-grid');
@@ -608,6 +615,23 @@ var MODES = {
       showStat:'stars'
     };
   }},
+  starSub: { board:'all', pick:2, build:function(cards){
+    var pairIdx = combos(cards.length,2);
+    var p = pick(pairIdx);
+    var target = Math.abs(cards[p[0]].stars - cards[p[1]].stars);
+    return {
+      text: '找出星星「相減等於 <span class="tgt num">'+target+'</span>」的兩款月餅 ⭐',
+      check: function(idx){ return idx.length===2 && (Math.abs(cards[idx[0]].stars-cards[idx[1]].stars)===target); },
+      reveal: function(){
+        var m = pairIdx.filter(function(pr){return Math.abs(cards[pr[0]].stars-cards[pr[1]].stars)===target;});
+        var one = m[0];
+        var hi = cards[one[0]].stars>=cards[one[1]].stars ? one[0] : one[1];
+        var lo = hi===one[0] ? one[1] : one[0];
+        return cards[hi].name+'（'+cards[hi].stars+'★）－'+cards[lo].name+'（'+cards[lo].stars+'★）＝'+target+'★';
+      },
+      showStat:'stars'
+    };
+  }},
   eq: { board:'low', pick:2, memorize:0, build:function(cards){
     var pairIdx = combos(cards.length,2);
     var p2 = pick(pairIdx);
@@ -629,7 +653,10 @@ var MODES = {
     return {
       text: '哪一款月餅是 <span class="tgt num">'+target+'</span> 大卡呢？🧠',
       check: function(sel){ return sel.length===1 && cards[sel[0]].cal===target; },
-      reveal: function(){ return cards[idx].name+'（'+target+'大卡）'; },
+      reveal: function(){
+        var match = cards.filter(function(c){ return c.cal===target; })[0];
+        return match.name+'（'+target+'大卡）';
+      },
       showStat:'cal'
     };
   }},
@@ -740,7 +767,7 @@ function cancelPeek(){
 
 function renderMemorize(){
   clearTimer();
-  var eyebrow = el('p','eyebrow','STEP 1・記住月餅熱量'+(round.practice?'　🔥暖身模式':''));
+  var eyebrow = el('p','eyebrow','記住月餅熱量'+(round.practice?'　🔥暖身模式':''));
   stage.appendChild(eyebrow);
   stage.insertAdjacentHTML('beforeend', rabbitWidgetHTML(energyStage()));
 
@@ -766,7 +793,7 @@ function renderMemorize(){
   num.textContent = t;
   timerId = setInterval(function(){
     t--;
-    if(t<0){ clearTimer(); round.phase='answer'; round.timeLeft = round.cfg.answerTime; state.screen='play'; render(); return; }
+    if(t<0){ clearTimer(); round.phase='answer'; round.timeLeft = round.cfg.answerTime; shuffleInPlace(round.cards); state.screen='play'; render(); return; }
     num.textContent = t;
     var pct = t/total;
     arc.setAttribute('stroke-dashoffset', circ*(1-pct));
@@ -777,7 +804,7 @@ function renderMemorize(){
 function renderPlay(){
   clearTimer();
   clearPeekTimer();
-  var eyebrow = el('p','eyebrow','STEP 2・任務出題　STEP 3・熱量配對'+(round.practice?'　🔥暖身模式':''));
+  var eyebrow = el('p','eyebrow','任務出題　熱量配對'+(round.practice?'　🔥暖身模式':''));
   stage.appendChild(eyebrow);
   stage.insertAdjacentHTML('beforeend', rabbitWidgetHTML(energyStage()));
 
